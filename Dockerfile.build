@@ -1,0 +1,34 @@
+FROM golang:alpine AS builder
+
+RUN buildDeps=' \
+                make \
+                git \
+        ' \
+        set -x \
+        && apk --no-cache add $buildDeps \
+        && mkdir -p /go/src/github.com/jrasell/nomad-toast
+
+WORKDIR /go/src/github.com/jrasell/nomad-toast
+
+COPY . /go/src/github.com/jrasell/nomad-toast
+
+RUN \
+        make tools && \
+        make build
+
+FROM alpine:latest AS app
+
+LABEL maintainer James Rasell<(jamesrasell@gmail.com)> (@jrasell)
+LABEL vendor "jrasell"
+
+WORKDIR /usr/bin/
+
+COPY --from=builder /go/src/github.com/jrasell/nomad-toast/bin/nomad-toast /usr/bin/nomad-toast
+
+RUN \
+        apk --no-cache add \
+        ca-certificates \
+        && chmod +x /usr/bin/nomad-toast \
+        && echo "Build complete."
+
+CMD ["nomad-toast", "--help"]
